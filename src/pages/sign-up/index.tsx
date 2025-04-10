@@ -1,187 +1,164 @@
-import React, {useState} from "react"
-import AuthImagePattern from "../../components/auth-image-side"
-
 import {
-    Eye,
-    EyeOff,
-    Loader2,
-    Lock,
-    Mail,
-    MessageSquare,
-    User,
-} from "lucide-react"
-import {Link, useNavigate} from "react-router-dom"
-import {useAuthStore} from "../../store/useAuthStore"
-
-interface FormData {
-    fullName: string
-    email: string
-    password: string
-}
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  MessageSquare,
+  Loader2,
+  User,
+} from "lucide-react";
+import AuthImagePattern from "../../components/auth-image-pattern";
+import { useState } from "react";
+import type { FormDataType } from "../../@types";
+import { Link } from "react-router-dom";
+import { useAuthStore } from "../../store/useAuthStore";
+import toast from "react-hot-toast";
 
 const SignUp = () => {
-    const navigate = useNavigate()
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const { signup, isRegisterLoading } = useAuthStore();
+  const [formData, setFormData] = useState<FormDataType>({
+    email: "",
+    password: "",
+    fullName: "",
+  });
 
-    const {signUp, isSigninLoading} = useAuthStore()
-
-    const [showPass, setShowPass] = useState<boolean>(false)
-    const [formData, setFormData] = useState<FormData>({
-        fullName: "",
-        email: "",
-        password: "",
-    })
-
-    const loginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault()
-        await signUp(formData)
+  const validateForm = () => {
+    if (!formData.fullName?.trim()) return toast.error("Full name is required");
+    if (!formData.email.trim()) return toast.error("Email is required");
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      return toast.error("Invalid email format");
     }
+    if (!formData.password) return toast.error("Password is required");
+    if (formData.password.length < 6) {
+      return toast.error("Password must be at least 6 characters");
+    }
+    return true;
+  };
 
-    return (
-        <section className="h-screen grid lg:grid-cols-2">
-            {/* left side */}
-            <div className="flex items-center justify-center flex-col p-6 sm:p-12">
-                <div className="w-full max-w-md space-y-8">
-                    <div className="text-center mb-8">
-                        <div className="flex flex-col items-center gap-1">
-                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors">
-                                <MessageSquare className="w-6 h-6 text-primary" />
-                            </div>
+  const loginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const validation = validateForm();
+    if (validation === true) {
+      await signup(formData);
+    }
+  };
 
-                            <div className=" flex flex-col gap-[0] leading-[130%] mt-2">
-                                <h1 className="text-2xl font-bold">
-                                    Create Account
-                                </h1>
-                                <p className="text-base-content/60 text-sm">
-                                    Get started with your free account
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* form */}
-                <form
-                    onSubmit={loginSubmit}
-                    className="w-[75%] max-[500px]:w-[100%] flex flex-col gap-5">
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text font-medium">
-                                Full Name
-                            </span>
-                        </label>
-                        <div className="flex justify-start border p-[2px_10px] rounded-lg gap-2 items-center">
-                            <User className="h-5 w-5 text-base-content/40" />
-                            <input
-                                required
-                                value={formData.fullName}
-                                onChange={(e) =>
-                                    setFormData({
-                                        ...formData,
-                                        fullName: e.target.value,
-                                    })
-                                }
-                                name="fullName"
-                                type="text"
-                                className="input w-full !outline-none !border-none !ring-0"
-                                placeholder="John Doe"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text font-medium">
-                                Email
-                            </span>
-                        </label>
-                        <div className="flex justify-start border p-[2px_10px] rounded-lg gap-2 items-center">
-                            <Mail className="h-5 w-5 text-base-content/40" />
-                            <input
-                                required
-                                value={formData.email}
-                                onChange={(e) =>
-                                    setFormData({
-                                        ...formData,
-                                        email: e.target.value,
-                                    })
-                                }
-                                name="email"
-                                type="email"
-                                className="input w-full !outline-none !border-none !ring-0"
-                                placeholder="you@example.com"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text font-medium">
-                                Password
-                            </span>
-                        </label>
-                        <div className="flex justify-between border p-[2px_10px] rounded-lg items-center">
-                            <Lock className="h-5 w-5 text-base-content/40 mr-3" />
-                            <input
-                                required
-                                value={formData.password}
-                                onChange={(e) =>
-                                    setFormData({
-                                        ...formData,
-                                        password: e.target.value,
-                                    })
-                                }
-                                type={`${showPass ? "text" : "password"}`}
-                                className="input w-full !outline-none !border-none !ring-0"
-                                placeholder="password"
-                            />
-
-                            <div
-                                onClick={() => setShowPass(!showPass)}
-                                className="cursor-pointer h-10 px-1 flex justify-center items-center">
-                                {showPass ? (
-                                    <EyeOff className="h-5 w-5 text-base-content/40" />
-                                ) : (
-                                    <Eye className="h-5 w-5 text-base-content/40" />
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <button
-                        disabled={isSigninLoading}
-                        onClick={() => {
-                            navigate("/")
-                        }}
-                        type="submit"
-                        className="btn btn-primary w-full">
-                        {isSigninLoading ? (
-                            <>
-                                <Loader2 className="h-5 w-5 animate-spin" />
-                                loading...
-                            </>
-                        ) : (
-                            "Create Account"
-                        )}
-                    </button>
-                </form>
-
-                <div className="text-center mt-5">
-                    <p className="text-base-content/60">
-                        Already have an account{" "}
-                        <Link to={"/sign-in"} className="link link-primary">
-                            Sign in
-                        </Link>
-                    </p>
-                </div>
+  return (
+    <section className="h-screen grid lg:grid-cols-2">
+      <div className="flex items-center justify-center flex-col p-6 sm:p-12">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center mb-8">
+            <div className="flex flex-col items-center gap-2 group">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <MessageSquare className="w-6 h-6 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold mt-2">Welcome Back</h1>
+              <p className="text-base-content/60">Sign in to your account</p>
             </div>
+          </div>
+        </div>
+        <form onSubmit={loginSubmit} className="w-[70%] mx-auto">
+          {/* Full name */}
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text font-medium">Full name</span>
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <User className="h-5 w-5 text-base-content/40" />
+              </div>
+              <input
+                value={formData.fullName}
+                onChange={(e) =>
+                  setFormData({ ...formData, fullName: e.target.value })
+                }
+                type="text"
+                className="pl-10 py-2 w-full border rounded-md bg-base-200 text-base-content/80 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                placeholder="John Doe"
+              />
+            </div>
+          </div>
+          {/* Email */}
+          <div className="form-control mt-5">
+            <label className="label">
+              <span className="label-text font-medium">Email</span>
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Mail className="h-5 w-5 text-base-content/40" />
+              </div>
+              <input
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                type="email"
+                className="pl-10 py-2 w-full border rounded-md bg-base-200 text-base-content/80 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                placeholder="you@example.com"
+              />
+            </div>
+          </div>
+          {/* Password*/}
+          <div className="form-control mt-5">
+            <label className="label">
+              <span className="label-text font-medium">Password</span>
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="h-5 w-5 text-base-content/40" />
+              </div>
+              <input
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+                type={showPassword ? "text" : "password"}
+                className="pl-10 py-2 w-full border rounded-md bg-base-200 text-base-content/80 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                placeholder="password.com"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5 text-base-content/40" />
+                ) : (
+                  <Eye className="h-5 w-5 text-base-content/40" />
+                )}
+              </button>
+            </div>
+          </div>
+          <button
+            disabled={isRegisterLoading}
+            className="btn btn-primary w-full mt-8"
+          >
+            {isRegisterLoading ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Loading...</span>
+              </>
+            ) : (
+              <span>Sign up</span>
+            )}
+          </button>
+        </form>
+        <div className="text-center mt-5">
+          <p className="text-base-content/60">
+            Already have an account?{" "}
+            <Link to="/sign-in" className="link link-primary">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
+      <AuthImagePattern
+        title="Welcome back!"
+        subtitle="Sign in to continue your conversations and catch up with your messages."
+      />
+    </section>
+  );
+};
 
-            {/* right side */}
-            <AuthImagePattern
-                title="Join our community"
-                subtitle="Connect with friends, share moments, and stay in touch with your loved ones."
-            />
-        </section>
-    )
-}
-
-export default SignUp
+export default SignUp;

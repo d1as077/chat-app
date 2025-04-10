@@ -1,131 +1,167 @@
-import {create} from "zustand"
-import {AxiosError} from "axios"
-import toast from "react-hot-toast"
+import { create } from "zustand";
+import { axiosInstance } from "../lib";
+import type { AuthUserType, FormDataType } from "../@types";
+import { AxiosError } from "axios";
+import toast from "react-hot-toast";
+import { io, Socket } from "socket.io-client";
 
-import {axiosInstance} from "../lib"
-import {AuthUserType} from "../@types"
+const BASE_URL = "https://chat-app-bb-tai4.onrender.com";
 
-interface AuthType {
-    authUser: AuthUserType | null
-    isLoginLoading: boolean
-    isSigninLoading: boolean
-    isCheckingUserLoader: boolean
-    imgUploadLoading: boolean
-    signIn: (data: {email: string; password: string}) => Promise<void>
-    signUp: (data: {
-        fullName: string
-        email: string
-        password: string
-    }) => Promise<void>
-    checkUser: () => Promise<void>
-    updatePhoto: (data: any) => Promise<void>
-    logOut: () => Promise<void>
+interface UseAuthType {
+  authUser: AuthUserType | null;
+  isLoginLoading: boolean;
+  isRegisterLoading: boolean;
+  imgUploadLoading: boolean;
+  isCheckingUserLoader: boolean;
+  onlineUsers: string[] | null;
+  socket: Socket | null;
+  signin: (data: FormDataType) => Promise<void>;
+  signup: (data: FormDataType) => Promise<void>;
+  updatePhoto: (data: FormData) => Promise<void>;
+  checkUser: () => Promise<void>;
+  logout: () => Promise<void>;
+  connectSocket: () => void;
+  disconnectSocket: () => void;
 }
 
-export const useAuthStore = create<AuthType>((set) => ({
-    authUser: null,
-    isLoginLoading: false,
-    isSigninLoading: false,
-    isCheckingUserLoader: false,
-    imgUploadLoading: false,
+export const useAuthStore = create<UseAuthType>((set, get) => ({
+  authUser: null,
+  isLoginLoading: false,
+  isRegisterLoading: false,
+  isCheckingUserLoader: false,
+  imgUploadLoading: false,
+  onlineUsers: [],
+  socket: null,
 
-    checkUser: async () => {
-        set({isCheckingUserLoader: true})
-        try {
-            const res = await axiosInstance.get("/auth/check")
-            set({authUser: res.data.data})
-        } catch (error) {
-            if (error instanceof AxiosError) {
-                if (
-                    error.response &&
-                    error.response.data &&
-                    error.response.data.message
-                ) {
-                    toast.error(error.response.data.message)
-                }
-            }
-        } finally {
-            set({isCheckingUserLoader: true})
-        }
-    },
+  connectSocket: () => {
+    const { authUser, socket } = get();
+    if (!authUser || socket?.connected) return;
+    const socketIo = io(BASE_URL, {
+      query: {
+        userId: authUser._id,
+        withCredentials: true,
+      },
+    });
+    socketIo.connect();
+    set({ socket: socketIo });
+    socketIo.on("getOnlineUsers", (userIds: string[]) => {
+      set({ onlineUsers: userIds });
+    });
+  },
 
-    signIn: async (data) => {
-        set({isLoginLoading: true})
-        try {
-            const res = await axiosInstance.post("/auth/sign-in", data)
-            set({
-                authUser: res.data.user,
-                isLoginLoading: false,
-            })
-            toast.success("You have successfully signed in")
-        } catch (error) {
-            if (error instanceof AxiosError) {
-                if (
-                    error.response &&
-                    error.response.data &&
-                    error.response.data.message
-                ) {
-                    toast.error(error.response.data.message)
-                }
-            }
-            set({isLoginLoading: false})
-        } finally {
-            set({isLoginLoading: false})
-        }
-    },
+  disconnectSocket: () => {
+    const socket = get().socket;
+    if (socket?.connected) socket.disconnect();
+  },
 
-    signUp: async (data) => {
-        set({isSigninLoading: true})
-        try {
-            await axiosInstance.post("auth/sign-up", data)
-            toast.success("You have successfully signed up")
-        } catch (error) {
-            if (error instanceof AxiosError) {
-                if (
-                    error.response &&
-                    error.response.data.message &&
-                    error.response.data
-                ) {
-                    toast.error(
-                        error.response.data.message ||
-                            "Something went wrong, please try again"
-                    )
-                }
-            }
-        } finally {
-            set({isSigninLoading: false})
+  checkUser: async () => {
+    set({ isCheckingUserLoader: true });
+    try {
+      const res = await axiosInstance.get("/auth/check");
+      set({ authUser: res.data.data });
+      get().connectSocket();
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
+          toast.error(error.response.data.message);
         }
-    },
+      }
+    } finally {
+      set({ isCheckingUserLoader: false });
+    }
+  },
 
-    updatePhoto: async (data) => {
-        set({imgUploadLoading: true})
-        try {
-            const res = await axiosInstance.post("/auth/update-photo", data)
-            set({authUser: res.data.data})
-        } catch (error) {
-        } finally {
-            set({imgUploadLoading: false})
-        }
-    },
+  signin: async (data) => {
+    set({ isLoginLoading: true });
+    try {
+      const res = await axiosInstance.post("/auth/sign-in", data);
+      console.log(res);
 
-    logOut: async () => {
-        try {
-            await axiosInstance.post("/auth/logout")
-            toast.success("Log out successful")
-            set({authUser: null})
-        } catch (error) {
-            if (error instanceof AxiosError) {
-                if (
-                    error.response &&
-                    error.response.data.message &&
-                    error.response.data
-                ) {
-                    toast.error(
-                        error.response.data.message ||
-                            "Something went wrong, please try again"
-                    )
-                }
-            }
+      set({ authUser: res.data.data });
+      toast.success("Sign-in completed successfully!");
+      get().connectSocket();
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
+          toast.error(error.response.data.message);
         }
-    },
-}))
+      }
+    } finally {
+      set({ isLoginLoading: false });
+    }
+  },
+
+  signup: async (data) => {
+    set({ isRegisterLoading: true });
+    try {
+      const res = await axiosInstance.post("/auth/sign-up", data);
+      set({ authUser: res.data.data });
+      toast.success("Sign-up completed successfully!");
+      get().connectSocket();
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
+          toast.error(error.response.data.message);
+        }
+      }
+    } finally {
+      set({ isRegisterLoading: false });
+    }
+  },
+
+  updatePhoto: async (data) => {
+    set({ imgUploadLoading: true });
+    try {
+      const res = await axiosInstance.post("/auth/update-photo", data, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      set({ authUser: res.data.data });
+      toast.success("Image uploaded successfully!");
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
+          toast.error(error.response.data.message);
+        }
+      }
+    } finally {
+      set({ imgUploadLoading: false });
+    }
+  },
+
+  logout: async () => {
+    try {
+      await axiosInstance.post("/auth/logout");
+      set({ authUser: null });
+      toast.success("Logout completed successfully!");
+      get().disconnectSocket();
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        if (
+          error.response &&
+          error.response.data &&
+          error.response.data.message
+        ) {
+          toast.error(error.response.data.message);
+        }
+      }
+    }
+  },
+}));

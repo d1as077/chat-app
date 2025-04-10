@@ -1,80 +1,64 @@
-import {useEffect} from "react"
-import {Navigate, Route, Routes} from "react-router-dom"
-import {Toaster} from "react-hot-toast"
-import {Loader} from "lucide-react"
-
-import {useAuthStore} from "./store/useAuthStore"
-
-// components
-import Home from "./pages/home"
-import SignIn from "./pages/sign-in"
-import SignUp from "./pages/sign-up"
-import ProfilePage from "./pages/profile"
-import Settings from "./pages/settings"
-import Navbar from "./components/navbar"
-import {useThemeStore} from "./store/useThemeStore"
+import { Routes, Route, Navigate } from "react-router-dom";
+import SignIn from "./pages/sign-in";
+import SignUp from "./pages/sign-up";
+import { Toaster } from "react-hot-toast";
+import { useAuthStore } from "./store/useAuthStore";
+import { useEffect } from "react";
+import { Loader } from "lucide-react";
+import Navbar from "./components/navbar";
+import Profile from "./components/profile";
+import Settings from "./components/settings";
+import { useThemeStore } from "./store/useThemeStore";
+import Home from "./pages/home";
 
 const App = () => {
-    const {checkUser, isCheckingUserLoader, authUser} = useAuthStore()
-    const {theme} = useThemeStore()
+  const { checkUser, authUser, isCheckingUserLoader } = useAuthStore();
+  useEffect(() => {
+    checkUser();
+  }, [checkUser]);
 
-    useEffect(() => {
-        checkUser()
-    }, [checkUser])
-
-    if (!isCheckingUserLoader) {
-        return (
-            <div className="flex items-center justify-center h-screen">
-                <Loader className="size-10 animate-spin" />
-            </div>
-        )
-    }
-
+  const { theme } = useThemeStore();
+  if (isCheckingUserLoader) {
     return (
-        <main data-theme={theme}>
-            <Toaster position="top-center" reverseOrder={false} />
-            {authUser ? <Navbar /> : null}
+      <div className="flex items-center justify-center h-screen">
+        <Loader className="animate-spin text-primary size-10" />
+      </div>
+    );
+  }
+  return (
+    <main data-theme={theme}>
+      <Toaster position="top-center" reverseOrder={false} />
+      {authUser && <Navbar />}
+      <Routes>
+        <Route
+          path="/"
+          element={authUser ? <Home /> : <Navigate to={"/sign-in"} replace />}
+        />
+        <Route
+          path="/sign-in"
+          element={!authUser ? <SignIn /> : <Navigate to={"/"} replace />}
+        />
+        <Route
+          path="/sign-up"
+          element={
+            !authUser ? <SignUp /> : <Navigate to={"/sign-up"} replace />
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            authUser ? <Profile /> : <Navigate to={"/profile"} replace />
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            authUser ? <Settings /> : <Navigate to={"/settings"} replace />
+          }
+        />
+      </Routes>
+    </main>
+  );
+};
 
-            <Routes>
-                <Route
-                    path="/"
-                    element={
-                        authUser ? (
-                            <Home />
-                        ) : (
-                            <Navigate to={"/sign-in"} replace />
-                        )
-                    }
-                />
-
-                <Route path="/sign-in" element={<SignIn />} />
-
-                <Route path="/sign-up" element={<SignUp />} />
-
-                <Route
-                    path="/settings"
-                    element={
-                        authUser ? (
-                            <Settings />
-                        ) : (
-                            <Navigate to={"/sign-in"} replace />
-                        )
-                    }
-                />
-
-                <Route
-                    path="/profile"
-                    element={
-                        authUser ? (
-                            <ProfilePage />
-                        ) : (
-                            <Navigate to={"/"} replace />
-                        )
-                    }
-                />
-            </Routes>
-        </main>
-    )
-}
-
-export default App
+export default App;
